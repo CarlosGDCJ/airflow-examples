@@ -1,0 +1,13 @@
+services:
+  airflow:
+    image: apache/airflow:2.4.3-python3.10
+    entrypoint: "/bin/sh"
+    command: >
+      -c "airflow db init &&
+          airflow users create --username admin --password admin --firstname Anonymous --lastname Admin --role Admin --email admin@example.org &&
+          airflow webserver &
+          airflow scheduler"
+    ports:
+      - 8080:8080
+    volumes:
+      - ./dags/:/opt/airflow/dags/
