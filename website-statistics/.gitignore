@@ -1,3 +1,0 @@
-data/*
-airflow/stats/*
-!data/create_data.sh
