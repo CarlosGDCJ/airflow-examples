@@ -1,0 +1,35 @@
+services:
+  eventsim:
+    build: ./eventsim
+    volumes:
+      - ./data:/opt/eventsim/generated_data
+  
+  fastapi:
+    build: ./api
+    command: main:app --host 0.0.0.0 --port 8000
+    ports:
+      - 8000:8000
+    working_dir: /src
+    volumes:
+      - ./data:/data
+    depends_on:
+      eventsim:
+        condition: service_completed_successfully
+    
+  airflow:
+    image: apache/airflow:2.4.3-python3.10
+    entrypoint: "/bin/sh"
+    command: >
+      -c "airflow db init &&
+          airflow webserver &
+          airflow users create --username admin --password admin --firstname Anonymous --lastname Admin --role Admin --email admin@example.org &&
+          airflow scheduler"
+    ports:
+      - 8080:8080
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/stats:/tmp/stats
+    
+    depends_on:
+      fastapi:
+        condition: service_started

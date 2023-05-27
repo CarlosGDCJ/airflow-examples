@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from enum import Enum
 
 import json
 import datetime as dt
@@ -9,7 +8,7 @@ import pandas as pd
 app = FastAPI()
 
 data = []
-with open("../data/listen_events", "r") as f:
+with open("/data/listen_events", "r") as f:
     for line in f:
         datum = json.loads(line)
         datum["date"] = dt.datetime.fromtimestamp(datum.pop("ts") / 1000.0).date()
@@ -17,7 +16,6 @@ with open("../data/listen_events", "r") as f:
 
 
 df = pd.DataFrame(data)
-print(df.info())
 
 
 @app.get("/events/last30")

@@ -11,4 +11,5 @@ COPY eventsim.sh /opt/eventsim/eventsim.sh
 COPY examples /opt/eventsim/examples
 COPY data /opt/eventsim/data
 COPY eventsim-assembly-2.0.jar /opt/eventsim/eventsim-assembly-2.0.jar
-ENTRYPOINT ["./eventsim.sh"]
+CMD ./eventsim.sh -c examples/example-config.json --nouseAvro -n 200 --start-time 2023-03-25T00:00 \
+--end-time 2023-07-25T00:00 --growth-rate 0.8 --userid 1000000 generated_data
