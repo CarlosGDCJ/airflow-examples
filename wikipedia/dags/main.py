@@ -13,22 +13,32 @@ dag = DAG(
     start_date=today,
     schedule_interval="@hourly",
     template_searchpath="/tmp",
+    max_active_runs=1,  # at each run we overwrite the same files
 )
 
 
 def _get_data(logical_date):
-    year, month, day, hour, *_ = logical_date.timetuple()
+    # pageviews...1900.gz (19h) contains data from the interval 19h~20h
+    # so when the 20h task runs, we look for pageviews...1900
+    year, month, day, hour, *_ = (logical_date - pendulum.duration(hours=1)).timetuple()
     url = (
         "https://dumps.wikimedia.org/other/pageviews/"
         f"{year}/{year}-{month:02}/"
         f"pageviews-{year}{month:02}{day:02}-"
         f"{hour:02}0000.gz"
     )
+    output_path = f"/tmp/pageviews.gz"
+
     print("Retrieving URL:")
     print("", url, sep="\t")
+    print("Saving to path:")
+    print("", output_path, sep="\t")
 
-    output_path = "/tmp/pageviews.gz"
-    urlretrieve(url, output_path)
+    # https://stackoverflow.com/questions/37748105/how-to-use-progressbar-module-with-urlretrieve
+    def show_progress(block_num, block_size, total_size):
+        print(round(block_num * block_size / total_size * 100, 2))
+
+    urlretrieve(url, output_path, show_progress)
 
 
 # fmt: off
@@ -48,17 +58,19 @@ extract_pageview = BashOperator(
 
 def _process_data(pagenames, language, logical_date):
     pageviews = dict.fromkeys(pagenames, 0)
-    with open("/tmp/pageviews", "r") as f:
+    with open(f"/tmp/pageviews", "r") as f:
         for line in f:
             domain_code, page_title, view_count, *_ = line.split(" ")
             if domain_code == language and page_title in pagenames:
                 pageviews[page_title] = view_count
 
-    with open("/tmp/postgres_query.sql", "w") as f:
+    with open(f"/tmp/postgres_query.sql", "w") as f:
         for pagename, view_count in pageviews.items():
+            # insert using end of interval as timestamp
+            # 20h = data from 19h to 20h
             f.write(
                 "INSERT INTO pageview_counts VALUES ("
-                f"'{pagename}, {view_count}, {logical_date}"
+                f"'{pagename}', {view_count}, '{logical_date}'"
                 ");\n"
             )
 
@@ -91,4 +103,4 @@ write_to_postgres = PostgresOperator(
     dag=dag,
 )
 
-get_data >> extract_pageview >> process_data
+get_data >> extract_pageview >> process_data >> write_to_postgres

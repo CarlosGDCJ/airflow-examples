@@ -1,0 +1,30 @@
+services:
+  airflow:
+    image: apache/airflow:2.4.3-python3.10
+    entrypoint: "/bin/sh"
+    command: >
+      -c "airflow db init &&
+          airflow webserver &
+          airflow users create --username admin --password admin --firstname Anonymous --lastname Admin --role Admin --email admin@example.org &&
+          airflow connections add --conn-type postgres --conn-host postgres --conn-login airflow --conn-password airflow my_postgres &&
+          airflow scheduler"
+    ports:
+      - 8080:8080
+    volumes:
+      - ./dags:/opt/airflow/dags
+
+    depends_on:
+      postgres:
+        condition: service_started
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    
+    ports:
+      - 5432:5432
+    volumes:
+      - ./sql/create_table.sql:/docker-entrypoint-initdb.d/create_table.sql
