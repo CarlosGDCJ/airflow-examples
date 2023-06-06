@@ -7,7 +7,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow import DAG
 
 
-today = pendulum.today("utc")
+today = pendulum.datetime(2023, 6, 4)
 dag = DAG(
     dag_id="wikipedia_pageviews",
     start_date=today,
